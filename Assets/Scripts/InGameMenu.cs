@@ -1,3 +1,4 @@
+using Mirror;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -16,6 +17,8 @@ public class InGameMenu : MonoBehaviour
     public Button restartButton;
 
     public BoardController boardController;
+
+    public NetworkManager lobbyManager;
 
     public bool gameEnded = false;
 
@@ -58,11 +61,19 @@ public class InGameMenu : MonoBehaviour
 
     public void LoadMenu()
     {
-        UnityEngine.SceneManagement.SceneManager.LoadSceneAsync("Menu");
+        if (lobbyManager != null)
+        {
+            lobbyManager.StopClient();
+        }
+        UnityEngine.SceneManagement.SceneManager.LoadScene("Menu");
     }
 
     public void QuitGame()
     {
+        if (lobbyManager != null)
+        {
+            lobbyManager.StopClient();
+        }
         Application.Quit();
     }
 
