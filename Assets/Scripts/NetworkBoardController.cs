@@ -15,9 +15,11 @@ public class NetworkBoardController : NetworkBehaviour
     int currentPlayer = 1;
     int round = 0;
 
+    public Action StartGameUI;
     public Action<int> SwitchTurnUI;
-    public Action<int> ShowGameResult;
-    public Action EndGame;
+    public Action<int> ShowGameResultUI;
+    public Action ShowEndGameUI;
+    public Action ServerEndGame;
 
     bool isGameStarted = false;
 
@@ -123,17 +125,17 @@ public class NetworkBoardController : NetworkBehaviour
 
         Debug.Log("Player " + board[slot1] + " wins!");
 
-        // ShowGameResult(board[slot1]);
+        ShowGameResultUI(board[slot1]);
 
-        //EndGame();
+        EndGame();
     }
 
     [ServerCallback]
     void RpcHandleDraw()
     {
         Debug.Log("Draw!");
-        // ShowGameResult(0);
-        //EndGame();
+        ShowGameResultUI(0);
+        EndGame();
     }
 
     public int GetCurrentPlayer()
@@ -144,20 +146,26 @@ public class NetworkBoardController : NetworkBehaviour
     [ServerCallback]
     public void StartGame()
     {
-        isGameStarted = true;
-        currentPlayer = 0;
-        round = 0;
-        // SwitchTurnUI(currentPlayer);
+        StartGameUI();
+        StartCoroutine(WaitAndStartGame());
     }
 
     [ServerCallback]
-    public void ResetBoard()
+    void ResetBoard()
     {
         // Reset board
         for (int i = 0; i < 9; i++)
         {
             board[i] = 0;
         }
+    }
+
+    [ServerCallback]
+    public void EndGame()
+    {
+        isGameStarted = false;
+        ShowEndGameUI();
+        StartCoroutine(WaitAndEndGame());
     }
 
     [ServerCallback]
@@ -173,5 +181,22 @@ public class NetworkBoardController : NetworkBehaviour
         }
         int randomIndex = UnityEngine.Random.Range(0, emptySlots.Count);
         MakeMove(randomIndex, currentPlayer);
+    }
+
+    [ServerCallback]
+    IEnumerator WaitAndStartGame()
+    {
+        yield return new WaitForSeconds(3f);
+        isGameStarted = true;
+        currentPlayer = 0;
+        round = 0;
+        SwitchTurnUI(currentPlayer);
+    }
+
+    IEnumerator WaitAndEndGame()
+    {
+        yield return new WaitForSeconds(3f);
+        ServerEndGame();
+        ResetBoard();
     }
 }

@@ -29,10 +29,8 @@ public class NetworkPlayer : NetworkBehaviour
         playerName = "Player " + id;
 
         Debug.Log("Player " + id + " registered");
-        if (playerID < 2)
-        {
-            StartCoroutine(WaitAndDo(() => RpcSetupPlayerOnClient(id)));
-        }
+
+        StartCoroutine(WaitAndDo(() => RpcSetupPlayerOnClient(id)));
     }
 
     [ClientRpc]
@@ -40,12 +38,15 @@ public class NetworkPlayer : NetworkBehaviour
     {
         playerID = id;
         playerName = "Player " + id;
-        for (int i = 0; i < 9; i++)
+        if (id < 2)
         {
-            int index = i;
-            buttons[i] = GameObject.Find("Button" + i).GetComponent<Button>();
-            buttons[i].onClick.AddListener(() => OnButtonClick(index));
-            buttons[i].onClick.AddListener(() => Debug.Log("Trying move on index" + index));
+            for (int i = 0; i < 9; i++)
+            {
+                int index = i;
+                buttons[i] = GameObject.Find("Button" + i).GetComponent<Button>();
+                buttons[i].onClick.AddListener(() => OnButtonClick(index));
+                buttons[i].onClick.AddListener(() => Debug.Log("Trying move on index" + index));
+            }
         }
         SendPlayerIDToUI();
     }

@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Mirror;
+using UnityEngine.SceneManagement;
+using System;
 
 public class NetworkLobby : NetworkManager
 {
@@ -11,10 +13,35 @@ public class NetworkLobby : NetworkManager
 
     public NetworkBoardController boardController;
 
+    public Action InterruptGame;
+
+    public override void Start()
+    {
+        base.Start();
+        if (IsServerMode())
+        {
+            StartServer();
+        }
+    }
+
+    bool IsServerMode()
+    {
+        string[] args = Environment.GetCommandLineArgs();
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (args[i] == "-server")
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public override void OnStartServer()
     {
         base.OnStartServer();
         playerLists.Clear();
+        boardController.ServerEndGame += StopGame;
     }
 
     public override void OnServerAddPlayer(NetworkConnectionToClient conn)
@@ -27,7 +54,7 @@ public class NetworkLobby : NetworkManager
         // Player ID start with 0
         player.RegisterPlayer(playerLists.IndexOf(player));
 
-        if (playerLists.Count > 1)
+        if (playerLists.Count == 2)
         {
             StartGame();
         }
@@ -43,30 +70,41 @@ public class NetworkLobby : NetworkManager
         // Stop the game if player0 or player1 leave
         if (playerLists.IndexOf(player) < 2)
         {
-            Debug.Log("Game Stoped");
-            // StopGame();
+            InterruptGame();
+            boardController.EndGame();
         }
         playerLists.Remove(player);
 
         base.OnServerDisconnect(conn);
     }
 
+    public override void OnClientDisconnect()
+    {
+        base.OnClientDisconnect();
+        StartCoroutine(WaitAndDo(3f, () => { SceneManager.LoadScene("Menu"); Destroy(gameObject); }));
+    }
+
+    [ServerCallback]
     void StartGame()
     {
         Debug.Log("Game Started");
         boardController.StartGame();
     }
 
+    [ServerCallback]
     void StopGame()
     {
         foreach (NetworkPlayer player in playerLists)
         {
             player.connectionToClient.Disconnect();
         }
-
+        StopAllCoroutines();
         playerLists.Clear();
+    }
 
-        // Reset board on server
-        boardController.ResetBoard();
+    IEnumerator WaitAndDo(float time, System.Action action)
+    {
+        yield return new WaitForSeconds(time);
+        action();
     }
 }
